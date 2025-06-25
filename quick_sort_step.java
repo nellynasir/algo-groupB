@@ -3,95 +3,89 @@ import java.util.*;
 
 public class quick_sort_step {
 
-    static List<String> steps = new ArrayList<>();
+    // Read rows from CSV file between specified start and end rows (1-based index)
+    public static List<String[]> readRows(String filename, int start, int end) throws IOException {
+        List<String[]> rows = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+            String line;
+            int rowNum = 0;
+            while ((line = br.readLine()) != null) {
+                rowNum++;
+                if (rowNum >= start && rowNum <= end) {
+                    String[] parts = line.split(",");
+                    rows.add(new String[] { parts[0].trim(), parts[1].trim() });
+                }
+            }
+        }
+        return rows;
+    }
 
-    public static void main(String[] args) throws Exception {
+    // Recursive quick sort with logging of steps after each partition
+    public static void quickSortWithSteps(List<String[]> data, int low, int high, List<String> steps) {
+        if (low < high) {
+            int pi = partition(data, low, high);
+            steps.add("pi=" + pi + " " + formatData(data)); // Log array after partition
+            quickSortWithSteps(data, low, pi - 1, steps); // Sort left part
+            quickSortWithSteps(data, pi + 1, high, steps); // Sort right part
+        }
+    }
+
+    // Partition function using last element as pivot
+    public static int partition(List<String[]> data, int low, int high) {
+        int pivot = Integer.parseInt(data.get(high)[0]);
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            int val = Integer.parseInt(data.get(j)[0]);
+            if (val < pivot) {
+                i++;
+                Collections.swap(data, i, j); // Swap smaller elements to the left
+            }
+        }
+
+        Collections.swap(data, i + 1, high); // Place pivot in the correct position
+        return i + 1;
+    }
+
+    // Format the list of (int, string) pairs as a readable string for logging
+    public static String formatData(List<String[]> data) {
+        List<String> result = new ArrayList<>();
+        for (String[] pair : data) {
+            result.add(pair[0] + "/" + pair[1]);
+        }
+        return result.toString(); // Convert to printable list format
+    }
+
+    public static void main(String[] args) throws IOException {
+        // Check for proper argument count
         if (args.length != 3) {
-            System.out.println("Usage: java quick_sort_step <csv_file> <startRow> <endRow>");
+            System.out.println("Usage: java quick_sort_step <csv_file> <start_row> <end_row>");
             return;
         }
 
-        String csvFile = args[0];
+        String filename = args[0];
         int startRow = Integer.parseInt(args[1]);
         int endRow = Integer.parseInt(args[2]);
 
-        List<Data> data = readDataset(csvFile, startRow, endRow);
-        steps.add(formatList(data)); // Add initial state
+        // Step 1: Read dataset from given row range
+        List<String[]> data = readRows(filename, startRow, endRow);
 
-        quickSort(data, 0, data.size() - 1);
+        // Step 2: Initialize step list with original array
+        List<String> steps = new ArrayList<>();
+        steps.add(formatData(data));
 
-        String outputFile = String.format("quick_sort_step_%d_%d.txt", startRow, endRow);
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+        // Step 3: Perform quick sort with step tracking
+        quickSortWithSteps(data, 0, data.size() - 1, steps);
+
+        // Step 4: Write sorting steps to output file
+        String outputFile = "quick_sort_step_" + startRow + "_" + endRow + ".txt";
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
             for (String step : steps) {
-                writer.write(step + "\n");
+                bw.write(step);
+                bw.newLine();
             }
         }
 
         System.out.println("Steps saved to " + outputFile);
-    }
-
-    static class Data {
-        int number;
-        String text;
-
-        Data(int number, String text) {
-            this.number = number;
-            this.text = text;
-        }
-
-        @Override
-        public String toString() {
-            return number + "/" + text;
-        }
-    }
-
-    static List<Data> readDataset(String filename, int startRow, int endRow) throws Exception {
-        List<Data> result = new ArrayList<>();
-        BufferedReader reader = new BufferedReader(new FileReader(filename));
-        String line;
-        int lineNum = 0;
-
-        while ((line = reader.readLine()) != null) {
-            lineNum++;
-            if (lineNum >= startRow && lineNum <= endRow) {
-                String[] parts = line.split(",");
-                result.add(new Data(Integer.parseInt(parts[0]), parts[1]));
-            }
-        }
-
-        reader.close();
-        return result;
-    }
-
-    static void quickSort(List<Data> arr, int low, int high) {
-        if (low < high) {
-            int pi = partition(arr, low, high);
-            steps.add("pi=" + pi + " " + formatList(arr));
-            quickSort(arr, low, pi - 1);
-            quickSort(arr, pi + 1, high);
-        }
-    }
-
-    static int partition(List<Data> arr, int low, int high) {
-        int pivot = arr.get(high).number;
-        int i = low - 1;
-
-        for (int j = low; j < high; j++) {
-            if (arr.get(j).number < pivot) {
-                i++;
-                Collections.swap(arr, i, j);
-            }
-        }
-
-        Collections.swap(arr, i + 1, high);
-        return i + 1;
-    }
-
-    static String formatList(List<Data> arr) {
-        List<String> formatted = new ArrayList<>();
-        for (Data d : arr) {
-            formatted.add(d.toString());
-        }
-        return formatted.toString();
     }
 }
